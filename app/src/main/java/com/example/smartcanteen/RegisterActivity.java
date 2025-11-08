@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.util.Patterns;
 import android.view.View;
 import android.widget.Button;
+import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -17,6 +18,7 @@ public class RegisterActivity extends AppCompatActivity {
 
     private TextInputEditText editTextNom, editTextPrenom, editTextNumeroEtudiant,
             editTextEmail, editTextPassword, editTextConfirmPassword;
+    private RadioGroup radioGroupRole;
     private Button buttonRegister;
     private TextView textViewLogin;
     private DatabaseHelper databaseHelper;
@@ -26,17 +28,21 @@ public class RegisterActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_register);
 
+        // Initialiser la base de données
         databaseHelper = new DatabaseHelper(this);
 
+        // Lier les vues
         editTextNom = findViewById(R.id.editTextNom);
         editTextPrenom = findViewById(R.id.editTextPrenom);
         editTextNumeroEtudiant = findViewById(R.id.editTextNumeroEtudiant);
         editTextEmail = findViewById(R.id.editTextEmail);
         editTextPassword = findViewById(R.id.editTextPassword);
         editTextConfirmPassword = findViewById(R.id.editTextConfirmPassword);
+        radioGroupRole = findViewById(R.id.radioGroupRole);
         buttonRegister = findViewById(R.id.buttonRegister);
         textViewLogin = findViewById(R.id.textViewLogin);
 
+        // Événement du bouton S'inscrire
         buttonRegister.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -44,15 +50,18 @@ public class RegisterActivity extends AppCompatActivity {
             }
         });
 
+        // Événement pour aller vers la page de connexion
         textViewLogin.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Toast.makeText(RegisterActivity.this, "Page de connexion (à implémenter)", Toast.LENGTH_SHORT).show();
+                // TODO: Intent vers LoginActivity (à créer par vos amis)
             }
         });
     }
 
     private void registerUser() {
+        // Récupérer les valeurs
         String nom = editTextNom.getText().toString().trim();
         String prenom = editTextPrenom.getText().toString().trim();
         String numeroEtudiant = editTextNumeroEtudiant.getText().toString().trim();
@@ -60,6 +69,17 @@ public class RegisterActivity extends AppCompatActivity {
         String password = editTextPassword.getText().toString().trim();
         String confirmPassword = editTextConfirmPassword.getText().toString().trim();
 
+        // Récupérer le rôle sélectionné
+        int selectedRoleId = radioGroupRole.getCheckedRadioButtonId();
+        String role = "etudiant"; // Par défaut
+
+        if (selectedRoleId == R.id.radioPersonnel) {
+            role = "personnel";
+        } else if (selectedRoleId == R.id.radioEtudiant) {
+            role = "etudiant";
+        }
+
+        // Validations
         if (nom.isEmpty()) {
             editTextNom.setError("Le nom est requis");
             editTextNom.requestFocus();
@@ -108,27 +128,39 @@ public class RegisterActivity extends AppCompatActivity {
             return;
         }
 
+        // Vérifier si le numéro étudiant existe déjà
         if (databaseHelper.checkNumeroEtudiantExists(numeroEtudiant)) {
             editTextNumeroEtudiant.setError("Ce numéro étudiant existe déjà");
             editTextNumeroEtudiant.requestFocus();
             return;
         }
 
+        // Vérifier si l'email existe déjà
         if (databaseHelper.checkEmailExists(email)) {
             editTextEmail.setError("Cet email existe déjà");
             editTextEmail.requestFocus();
             return;
         }
 
-        User newUser = new User(nom, prenom, numeroEtudiant, email, password);
+        // Créer un nouvel utilisateur avec le rôle
+        User newUser = new User(nom, prenom, numeroEtudiant, email, password, role);
 
+        // Ajouter à la base de données
         boolean success = databaseHelper.addUser(newUser);
 
         if (success) {
-            Toast.makeText(this, "Inscription réussie !", Toast.LENGTH_LONG).show();
+            String roleText = role.equals("personnel") ? "Personnel" : "Étudiant";
+            Toast.makeText(this, "✅ Compte " + roleText + " créé avec succès !", Toast.LENGTH_LONG).show();
+
+            // Log pour vérification (optionnel)
+            android.util.Log.d("REGISTER", "Utilisateur créé : " + nom + " " + prenom + " (" + roleText + ")");
+
+            // Vider les champs
             clearFields();
+
+            // TODO: Rediriger vers LoginActivity après inscription
         } else {
-            Toast.makeText(this, "Erreur lors de l'inscription. Réessayez.", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "❌ Erreur lors de l'inscription. Réessayez.", Toast.LENGTH_LONG).show();
         }
     }
 
@@ -139,5 +171,6 @@ public class RegisterActivity extends AppCompatActivity {
         editTextEmail.setText("");
         editTextPassword.setText("");
         editTextConfirmPassword.setText("");
+        radioGroupRole.check(R.id.radioEtudiant); // Remettre sur Étudiant par défaut
     }
 }

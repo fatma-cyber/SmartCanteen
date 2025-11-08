@@ -5,6 +5,7 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.util.Log;
 
 import com.example.smartcanteen.models.User;
 
@@ -14,7 +15,7 @@ import java.security.NoSuchAlgorithmException;
 public class DatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "SmartCanteen.db";
-    private static final int DATABASE_VERSION = 1;
+    private static final int DATABASE_VERSION = 2; // ← CHANGEZ À 2 SI C'ÉTAIT 1
 
     // Table Users
     private static final String TABLE_USERS = "users";
@@ -24,6 +25,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String COLUMN_NUMERO_ETUDIANT = "numero_etudiant";
     private static final String COLUMN_EMAIL = "email";
     private static final String COLUMN_PASSWORD = "mot_de_passe";
+    private static final String COLUMN_ROLE = "role"; // ← NOUVEAU
     private static final String COLUMN_DATE_CREATION = "date_creation";
 
     public DatabaseHelper(Context context) {
@@ -39,13 +41,16 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 + COLUMN_NUMERO_ETUDIANT + " TEXT UNIQUE NOT NULL,"
                 + COLUMN_EMAIL + " TEXT NOT NULL,"
                 + COLUMN_PASSWORD + " TEXT NOT NULL,"
+                + COLUMN_ROLE + " TEXT NOT NULL," // ← AJOUTEZ CETTE LIGNE
                 + COLUMN_DATE_CREATION + " DATETIME DEFAULT CURRENT_TIMESTAMP"
                 + ")";
         db.execSQL(CREATE_USERS_TABLE);
+        Log.d("DATABASE", "Table users créée avec succès");
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        Log.d("DATABASE", "Mise à jour de la base de données de version " + oldVersion + " à " + newVersion);
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_USERS);
         onCreate(db);
     }
@@ -70,19 +75,35 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     // Ajouter un utilisateur
     public boolean addUser(User user) {
-        SQLiteDatabase db = this.getWritableDatabase();
-        ContentValues values = new ContentValues();
+        SQLiteDatabase db = null;
+        try {
+            db = this.getWritableDatabase();
+            ContentValues values = new ContentValues();
 
-        values.put(COLUMN_NOM, user.getNom());
-        values.put(COLUMN_PRENOM, user.getPrenom());
-        values.put(COLUMN_NUMERO_ETUDIANT, user.getNumeroEtudiant());
-        values.put(COLUMN_EMAIL, user.getEmail());
-        values.put(COLUMN_PASSWORD, hashPassword(user.getMotDePasse()));
+            values.put(COLUMN_NOM, user.getNom());
+            values.put(COLUMN_PRENOM, user.getPrenom());
+            values.put(COLUMN_NUMERO_ETUDIANT, user.getNumeroEtudiant());
+            values.put(COLUMN_EMAIL, user.getEmail());
+            values.put(COLUMN_PASSWORD, hashPassword(user.getMotDePasse()));
+            values.put(COLUMN_ROLE, user.getRole()); // ← AJOUTEZ CETTE LIGNE
 
-        long result = db.insert(TABLE_USERS, null, values);
-        db.close();
+            long result = db.insert(TABLE_USERS, null, values);
 
-        return result != -1;
+            // Logs pour déboguer
+            Log.d("DATABASE", "Tentative d'insertion utilisateur : " + user.getNom() + " " + user.getPrenom());
+            Log.d("DATABASE", "Rôle : " + user.getRole());
+            Log.d("DATABASE", "Résultat de l'insertion : " + result);
+
+            return result != -1;
+        } catch (Exception e) {
+            Log.e("DATABASE", "Erreur lors de l'insertion : " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        } finally {
+            if (db != null) {
+                db.close();
+            }
+        }
     }
 
     // Vérifier si le numéro étudiant existe déjà
